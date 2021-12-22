@@ -2,6 +2,11 @@
 #include "script.h"
 #include "keyboard.h"
 #include <vector>
+#include <unordered_map>
+#include <string>
+#include <ctime>
+#include <map>
+#include <fstream>
 
 namespace std
 {
@@ -85,7 +90,8 @@ void sac_ragdoll_ped(Ped ped)
 			for (int i_flag = 0; i_flag < 20; i_flag++) PED::CLEAR_RAGDOLL_BLOCKING_FLAGS(ped, i_flag);
 			TASK::TASK_STAY_IN_COVER(ped);
 	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 3, false, false, false); // paralysis
-			PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 0, false, false, false); // dying state 1
+	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 0, false, false, false); // dying state 1
+			PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 1, false, false, false); // stiff
 			PED::SET_PED_RAGDOLL_FORCE_FALL(ped);
 	//	}
 //		PED::SET_PED_RAGDOLL_FORCE_FALL(ped);
@@ -138,7 +144,12 @@ void sac_spawn_female()
 void ScriptMain()
 {
 
+// ------------------------------------- Variable declaration -------------------------------------------------//
+
+
 	DECORATOR::DECOR_REGISTER("SAC_ragdoll", 3);
+
+	std::map<Ped, bool> pedmapishanging;
 
 	srand(GetTickCount());
 
@@ -150,6 +161,12 @@ void ScriptMain()
 
 //		bool activation_state{ false };
 //		constexpr int activation_key{ VK_F7 };
+
+
+
+// ------------------------------------- End variable declaration ---------------------------------------------//
+
+
 
 
 	while (true)
@@ -179,9 +196,74 @@ void ScriptMain()
 			//		TASK::CLEAR_PED_TASKS_IMMEDIATELY(peds[i], false, false); //stop whatever the NPC is doing
 					TASK::TASK_STAY_IN_COVER(peds[i]);
 			//		PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 3, false, false, false); // paralysis
-					PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 0, false, false, false); // dying state 1
+			//		PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 0, false, false, false); // dying state 1
+					PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 1, false, false, false); // stiff
+
 			//		PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
+					HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
 					}
+
+
+			// *********************************** Hanging management *********************************************** //
+
+
+								//checking if NPC is being hanged with TieYourLasso mod
+
+			pedmapishanging[peds[i]] = false;
+			
+			if (pedmapishanging[peds[i]] && !DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged")) pedmapishanging[peds[i]] = false;
+			else if (!pedmapishanging[peds[i]] && DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged"))
+			{
+				Vector3 vecfoot = ENTITY::GET_WORLD_POSITION_OF_ENTITY_BONE(peds[i], PED::GET_PED_BONE_INDEX(peds[i], 45454));
+				float groundzcoordped;
+				MISC::GET_GROUND_Z_FOR_3D_COORD(vecfoot.x, vecfoot.y, vecfoot.z, &groundzcoordped, true);
+				if (vecfoot.z > groundzcoordped + 0.5 && peds[i] != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(player)) //is not carried by player
+				{
+					pedmapishanging[peds[i]] = true;
+				}
+			}
+
+
+			if (pedmapishanging[peds[i]]) 
+			{
+			//	HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
+				if (sac_is_ped_hogtied(peds[i]) && !ENTITY::IS_ENTITY_DEAD(peds[i])) PED::RESET_PED_RAGDOLL_TIMER(peds[i]);
+				else
+				{
+					sac_ragdoll_ped(peds[i]);
+					PED::SET_ENABLE_HANDCUFFS(peds[i], true, false);
+				}
+			}
+				
+			//	sac_ragdoll_ped(peds[i]);
+
+
+
+		//	if (DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged") && !ENTITY::IS_ENTITY_DEAD(peds[i]))
+		//	{
+		//		Vector3 vecfoot = ENTITY::GET_WORLD_POSITION_OF_ENTITY_BONE(peds[i], PED::GET_PED_BONE_INDEX(peds[i], 45454));
+		//		float groundzcoordped;
+		//		MISC::GET_GROUND_Z_FOR_3D_COORD(vecfoot.x, vecfoot.y, vecfoot.z, &groundzcoordped, true);
+		//		if (vecfoot.z > groundzcoordped + 20)	// is hanging
+		//		{
+
+				//	for (int i_flag = 0; i_flag < 20; i_flag++) PED::CLEAR_RAGDOLL_BLOCKING_FLAGS(peds[i], i_flag);
+				//	TASK::TASK_STAY_IN_COVER(peds[i]);
+				//	PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 1, false, false, false);
+				//	PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
+
+		//			sac_ragdoll_ped(peds[i]);
+
+		//			HUD::_DISPLAY_TEXT("Hanging Ragdoll", 0, 0);
+
+				//	DECORATOR::DECOR_SET_INT(peds[i], "SAC_ragdoll", 1);
+
+					
+		//		}
+		//	}
+
+
+			// *********************************** End hanging management *********************************************** //
 			
 
 		//	TASK::TASK_HOGTIEABLE(peds[i]);
@@ -213,16 +295,19 @@ void ScriptMain()
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
 					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_BROOM_WORKING"), 60000, true, false, 1.0, false);
+					WEAPON::_HIDE_PED_WEAPONS(peds[i], 0, true);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
 					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_BUCKET_POUR_LOW"), 60000, true, false, 1.0, false);
+					WEAPON::_HIDE_PED_WEAPONS(peds[i], 0, true);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
 					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_STRAW_BROOM_WORKING"), 60000, true, false, 1.0, false);
+					WEAPON::_HIDE_PED_WEAPONS(peds[i], 0, true);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
@@ -293,51 +378,6 @@ void ScriptMain()
 
 
 
-
-
-
-			
-
-			// *********************************** Hanging management *********************************************** //
-
-			if (DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged") && !ENTITY::IS_ENTITY_DEAD(peds[i]))
-			{
-				Vector3 vecfoot = ENTITY::GET_WORLD_POSITION_OF_ENTITY_BONE(peds[i], PED::GET_PED_BONE_INDEX(peds[i], 45454));
-					float groundzcoordped;
-					MISC::GET_GROUND_Z_FOR_3D_COORD(vecfoot.x, vecfoot.y, vecfoot.z, &groundzcoordped, true);
-					if (vecfoot.z > groundzcoordped + 20)	// is hanging
-					{
-						if (sac_is_ped_hogtied(peds[i]))
-						{
-							//	TASK::TASK_STAY_IN_COVER(ped);
-							if (PED::IS_PED_RAGDOLL(peds[i])) PED::RESET_PED_RAGDOLL_TIMER(peds[i]);
-							else
-							{
-								PED::SET_PED_TO_RAGDOLL(peds[i], 5000, 5000, 0, false, false, false);
-								PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
-							}
-						}
-			//		TASK::TASK_STAY_IN_COVER(peds[i]);
-			//		if (PED::IS_PED_RAGDOLL(peds[i])) PED::RESET_PED_RAGDOLL_TIMER(peds[i]);
-			//		else
-			//			{
-			//			TASK::CLEAR_PED_TASKS_IMMEDIATELY(peds[i], false, false); //stop whatever the NPC is doing
-			//			TASK::TASK_STAY_IN_COVER(peds[i]);
-						//  PED::SET_PED_TO_RAGDOLL(peds[i], 5000, 5000, 0, false, false, false);
-						//	PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
-
-							for (int i_flag = 0; i_flag < 20; i_flag++) PED::CLEAR_RAGDOLL_BLOCKING_FLAGS(peds[i], i_flag);
-							PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 1, false, false, false);
-
-						//	PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 2, false, false, false);
-						//	PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 3, false, false, false);
-			//			}						
-					}
-			}
-
-
-			// *********************************** End hanging management *********************************************** //
-
 		}
 
 
@@ -375,7 +415,7 @@ void ScriptMain()
 			{
 			//	TASK::TASK_KNOCKED_OUT(playerFreeAimingTarget, 0, false);
 			//	TASK::TASK_KNOCKED_OUT_AND_HOGTIED(playerFreeAimingTarget, 0, false);
-
+				PED::SET_ENABLE_BOUND_ANKLES(playerFreeAimingTarget, true);
 			}
 
 		}
@@ -387,7 +427,7 @@ void ScriptMain()
 			{
 			//	TASK::TASK_KNOCKED_OUT(playerTarget, 0, false);
 			//	TASK::TASK_KNOCKED_OUT_AND_HOGTIED(playerTarget, 0, false);
-
+				PED::SET_ENABLE_BOUND_ANKLES(playerTarget, true);
 			}
 
 		}
