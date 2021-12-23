@@ -73,34 +73,22 @@ bool sac_is_ped_hogtied(Ped ped) // works
 
 void sac_ragdoll_ped(Ped ped)
 {
-
-//	PED::CLEAR_RAGDOLL_BLOCKING_FLAGS(ped, 1);
-
-//	if (PED::IS_PED_RAGDOLL(ped)) PED::RESET_PED_RAGDOLL_TIMER(ped);
-//	else
-//	{
-	//	TASK::CLEAR_PED_TASKS_IMMEDIATELY(ped, false, false);
-	//	PED::_RESET_PED_RAGDOLL_BLOCKING_FLAGS(ped, 1);
-	//	TASK::TASK_STAY_IN_COVER(ped);
-	//	if (PED::IS_PED_RAGDOLL(ped)) PED::RESET_PED_RAGDOLL_TIMER(ped);
-	//	else
-	//	{
-	//		TASK::CLEAR_PED_TASKS_IMMEDIATELY(ped, false, false);
-	//		TASK::CLEAR_PED_SECONDARY_TASK(ped);
+	if (ped != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(PLAYER::PLAYER_ID()))
+	{
 			for (int i_flag = 0; i_flag < 20; i_flag++) PED::CLEAR_RAGDOLL_BLOCKING_FLAGS(ped, i_flag);
 			TASK::TASK_STAY_IN_COVER(ped);
 	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 3, false, false, false); // paralysis
-	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 0, false, false, false); // dying state 1
-			PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 1, false, false, false); // stiff
+			PED::SET_PED_TO_RAGDOLL(ped, (3000 + std::rand() % (2999 - 0 + 1)), (3000 + std::rand() % (2999 - 0 + 1)), 0, false, false, false); // dying state 1
+	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 1, false, false, false); // very paralyzed
+	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 2, false, false, false); 
 			PED::SET_PED_RAGDOLL_FORCE_FALL(ped);
 	//	}
-//		PED::SET_PED_RAGDOLL_FORCE_FALL(ped);
 
-		HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
-
+//	HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
 //	}
+	}
 
-		DECORATOR::DECOR_SET_INT(ped, "SAC_ragdoll", 1);
+		
 
 //	Blip pedblip = MAP::BLIP_ADD_FOR_ENTITY(0x19365607, ped);
 //	MAP::_SET_BLIP_NAME_FROM_PLAYER_STRING(pedblip, "PDO bleeder");
@@ -151,7 +139,7 @@ void ScriptMain()
 
 	std::map<Ped, bool> pedmapishanging;
 
-	srand(GetTickCount());
+	
 
 		int msgtime{ 0 };
 
@@ -173,6 +161,7 @@ void ScriptMain()
 	{
 		// do stuff here.
 
+		srand(GetTickCount());
 
 		const int ARR_SIZE = 150;
 		Ped peds[ARR_SIZE];
@@ -181,6 +170,8 @@ void ScriptMain()
 		for (int i = 0; i < count; i++)
 		{
 
+			if (PED::IS_PED_RAGDOLL(peds[i])) TASK::TASK_HOGTIEABLE(peds[i]);
+
 
 			PED::SET_PED_CAN_ARM_IK(peds[i], true);
 			PED::SET_PED_CAN_HEAD_IK(peds[i], true);
@@ -188,7 +179,7 @@ void ScriptMain()
 			PED::SET_PED_CAN_TORSO_IK(peds[i], true);
 
 
-			if (DECORATOR::DECOR_EXIST_ON(peds[i], "SAC_ragdoll") && !ENTITY::IS_ENTITY_DEAD(peds[i]))
+			if (DECORATOR::DECOR_EXIST_ON(peds[i], "SAC_ragdoll") && !ENTITY::IS_ENTITY_DEAD(peds[i]) && !sac_is_ped_hogtied(peds[i]))
 		//		if (PED::IS_PED_RAGDOLL(peds[i])) PED::RESET_PED_RAGDOLL_TIMER(peds[i]);
 		//		else
 					{
@@ -196,11 +187,12 @@ void ScriptMain()
 			//		TASK::CLEAR_PED_TASKS_IMMEDIATELY(peds[i], false, false); //stop whatever the NPC is doing
 					TASK::TASK_STAY_IN_COVER(peds[i]);
 			//		PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 3, false, false, false); // paralysis
-			//		PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 0, false, false, false); // dying state 1
-					PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 1, false, false, false); // stiff
+					PED::SET_PED_TO_RAGDOLL(peds[i], (3000 + std::rand() % (2999 - 0 + 1)), (3000 + std::rand() % (2999 - 0 + 1)), 0, false, false, false); // dying state 1
+			//		PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 1, false, false, false); // stiff
+			//		PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 2, false, false, false); // very paralyzed
 
 			//		PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
-					HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
+			//		HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
 					}
 
 
@@ -227,41 +219,20 @@ void ScriptMain()
 			if (pedmapishanging[peds[i]]) 
 			{
 			//	HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
-				if (sac_is_ped_hogtied(peds[i]) && !ENTITY::IS_ENTITY_DEAD(peds[i])) PED::RESET_PED_RAGDOLL_TIMER(peds[i]);
+				if (sac_is_ped_hogtied(peds[i]) && !ENTITY::IS_ENTITY_DEAD(peds[i]))
+				{
+					PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
+			//		WAIT(100);
+			//		PED::SET_PED_TO_RAGDOLL(peds[i], 3000000, 3000000, 0, false, false, false);
+				}
 				else
 				{
-					sac_ragdoll_ped(peds[i]);
 					PED::SET_ENABLE_HANDCUFFS(peds[i], true, false);
+					WAIT(100);
+					sac_ragdoll_ped(peds[i]);
 				}
 			}
 				
-			//	sac_ragdoll_ped(peds[i]);
-
-
-
-		//	if (DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged") && !ENTITY::IS_ENTITY_DEAD(peds[i]))
-		//	{
-		//		Vector3 vecfoot = ENTITY::GET_WORLD_POSITION_OF_ENTITY_BONE(peds[i], PED::GET_PED_BONE_INDEX(peds[i], 45454));
-		//		float groundzcoordped;
-		//		MISC::GET_GROUND_Z_FOR_3D_COORD(vecfoot.x, vecfoot.y, vecfoot.z, &groundzcoordped, true);
-		//		if (vecfoot.z > groundzcoordped + 20)	// is hanging
-		//		{
-
-				//	for (int i_flag = 0; i_flag < 20; i_flag++) PED::CLEAR_RAGDOLL_BLOCKING_FLAGS(peds[i], i_flag);
-				//	TASK::TASK_STAY_IN_COVER(peds[i]);
-				//	PED::SET_PED_TO_RAGDOLL(peds[i], 3000, 3000, 1, false, false, false);
-				//	PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
-
-		//			sac_ragdoll_ped(peds[i]);
-
-		//			HUD::_DISPLAY_TEXT("Hanging Ragdoll", 0, 0);
-
-				//	DECORATOR::DECOR_SET_INT(peds[i], "SAC_ragdoll", 1);
-
-					
-		//		}
-		//	}
-
 
 			// *********************************** End hanging management *********************************************** //
 			
@@ -279,70 +250,75 @@ void ScriptMain()
 			{
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_GRAVE_MOURNING_KNEEL"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_GRAVE_MOURNING_KNEEL"), 60000, false, true, 1.0, false);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("GENERIC_SIT_GROUND_SCENARIO"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("GENERIC_SIT_GROUND_SCENARIO"), 60000, false, true, 1.0, false);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_CAMP_FIRE_SIT_GROUND"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_CAMP_FIRE_SIT_GROUND"), 60000, false, true, 1.0, false);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_BROOM_WORKING"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_BROOM_WORKING"), 60000, false, false, 1.0, false);
+					// true, false, *false = drop broom
+					// false, true, *false = walk away with broom
+					// false, false, *false = ?
+					// true, true, *false = ?
+
 					WEAPON::_HIDE_PED_WEAPONS(peds[i], 0, true);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_BUCKET_POUR_LOW"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_BUCKET_POUR_LOW"), 60000, false, true, 1.0, false);
 					WEAPON::_HIDE_PED_WEAPONS(peds[i], 0, true);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_STRAW_BROOM_WORKING"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_STRAW_BROOM_WORKING"), 60000, false, false, 1.0, false); // mirror broom
 					WEAPON::_HIDE_PED_WEAPONS(peds[i], 0, true);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_GROUND_DRINKING_DRUNK_PASSED_OUT"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_GROUND_DRINKING_DRUNK_PASSED_OUT"), 60000, false, true, 1.0, false);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SLEEP_GROUND_ARM"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SLEEP_GROUND_ARM"), 60000, false, true, 1.0, false);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_GROUND"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_GROUND"), 60000, false, true, 1.0, false);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_DRINK"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_DRINK"), 60000, false, true, 1.0, false);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_WASH_FACE_BUCKET_GROUND"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_WASH_FACE_BUCKET_GROUND"), 60000, false, true, 1.0, false);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_GROUND_SKETCHING"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_GROUND_SKETCHING"), 60000, false, true, 1.0, false);
 				}
 
 				if ((PED::GET_PED_TYPE(peds[i]) == 5) && (std::rand() % (99999 - 0 + 1)) < 2)
 				{
-					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_GROUND_READING"), 60000, true, false, 1.0, false);
+					TASK::TASK_START_SCENARIO_IN_PLACE_HASH(peds[i], MISC::GET_HASH_KEY("WORLD_HUMAN_SIT_GROUND_READING"), 60000, false, true, 1.0, false);
 				}
 
 			}
@@ -381,7 +357,7 @@ void ScriptMain()
 		}
 
 
-		if (std::rand() % (59999 - 0 + 1) < 2) // automatically spawn random female
+		if (std::rand() % (29999 - 0 + 1) < 2) // automatically spawn random female
 		{
 		sac_spawn_female();
 		}
@@ -447,6 +423,7 @@ void ScriptMain()
 			
 			if (IsKeyJustUp(VK_F5))		// F5 to ragdoll ped while aiming
 			{
+				DECORATOR::DECOR_SET_INT(playerFreeAimingTarget, "SAC_ragdoll", 1);
 				sac_ragdoll_ped(playerFreeAimingTarget);
 			}
 			
@@ -467,6 +444,7 @@ void ScriptMain()
 
 			if (IsKeyJustUp(VK_F5))		// F5 to ragdoll ped while aiming
 			{
+				DECORATOR::DECOR_SET_INT(playerTarget, "SAC_ragdoll", 1);
 				sac_ragdoll_ped(playerTarget);
 			}
 
