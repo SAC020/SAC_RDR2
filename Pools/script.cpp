@@ -96,16 +96,16 @@ void sac_ragdoll_ped(Ped ped)
 
 
 	
-			if (npchealth > 120) PED::SET_PED_TO_RAGDOLL(ped, (0 + health_rand), (0 + health_rand), 0, false, false, false); // 0
-			if (npchealth > 80 && npchealth <= 120) PED::SET_PED_TO_RAGDOLL(ped, (1000 + health_rand), (1000 + health_rand), 3, false, false, false); // 3
-			if (npchealth > 40 && npchealth <= 80) PED::SET_PED_TO_RAGDOLL(ped, (3000 + health_rand), (3000 + health_rand), 1, false, false, false); // 1
-			if (npchealth <= 40) PED::SET_PED_TO_RAGDOLL(ped, (5000 + health_rand), (5000 + health_rand), 2, false, false, false); // 2
+			if (npchealth > 100) PED::SET_PED_TO_RAGDOLL(ped, (0 + health_rand), (0 + health_rand), 0, false, false, false); // 0
+			if (npchealth > 50 && npchealth <= 100) PED::SET_PED_TO_RAGDOLL(ped, (1000 + health_rand), (1000 + health_rand), 3, false, false, false); // 3
+			if (npchealth <= 50) PED::SET_PED_TO_RAGDOLL(ped, (3000 + health_rand), (3000 + health_rand), 1, false, false, false); // 1
+	//		if (npchealth <= 40) PED::SET_PED_TO_RAGDOLL(ped, (5000 + health_rand), (5000 + health_rand), 2, false, false, false); // 2
 
 	//		std::rand() % (2999 - 0 + 1)
 
 	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 1, false, false, false); // very paralyzed
 	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 2, false, false, false); 
-			PED::SET_PED_RAGDOLL_FORCE_FALL(ped);
+	//		PED::SET_PED_RAGDOLL_FORCE_FALL(ped);  // force fall ?????
 	//	}
 
 //	HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
@@ -283,7 +283,7 @@ void ScriptMain()
 
 
 
-		if (!PED::IS_PED_RAGDOLL(peds[i]) && !PED::IS_PED_USING_ANY_SCENARIO(peds[i]))
+		if (!PED::IS_PED_RAGDOLL(peds[i]) && !PED::IS_PED_USING_ANY_SCENARIO(peds[i]) && PED::IS_PED_HUMAN(peds[i]) && peds[i] != PLAYER::PLAYER_ID() && pedmapishanging[peds[i]] )
 			{
 				PedPlayRandomScenario(peds[i]);
 			}
@@ -292,7 +292,7 @@ void ScriptMain()
 
 
 
-		}
+		}    // end scanning peds[i]
 
 
 		if (std::rand() % (29999 - 0 + 1) < 2) // automatically spawn random female
