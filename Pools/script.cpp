@@ -17,46 +17,7 @@ namespace std
 };
 
 
-void sac_replenish_cores()
-{
-	Player player = PLAYER::PLAYER_ID();
 
-	//on-off-switch for the feature
-	int ini_coredepletion = 1;
-
-	//amount of core depletion
-	int ini_coredepletionamounthealth = 6;
-	int ini_coredepletionamountstamina = 6;
-	int ini_coredepletionamountdeadeye = 6;
-
-	//time interval for core depletion (in milliseconds)
-	int ini_coredepletiontime = 3000;
-
-	//timer for core depletion
-	int coredepletiontimer = MISC::GET_GAME_TIMER() + ini_coredepletiontime;
-
-
-	//core depletion code
-	if (ini_coredepletion == 1)
-	{
-		int corehealth = ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(player, 0);
-		int corestamina = ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(player, 1);
-		int coredeadeye = ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(player, 2);
-		if (MISC::GET_GAME_TIMER() > coredepletiontimer)
-		{
-			ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(player, 0, corehealth + ini_coredepletionamounthealth);
-			ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(player, 1, corestamina + ini_coredepletionamountstamina);
-			ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(player, 2, coredeadeye + ini_coredepletionamountdeadeye);
-			coredepletiontimer = MISC::GET_GAME_TIMER() + ini_coredepletiontime;
-		}
-	}
-
-
-	//player Ped being set again and again (in case it changes)
-	player = PLAYER::PLAYER_PED_ID();
-
-
-}
 
 
 
@@ -74,7 +35,7 @@ bool sac_is_ped_hogtied(Ped ped) // works
 }
 
 
-void sac_ragdoll_ped(Ped ped)
+void sac_ragdoll_ped(Ped ped, bool do_fall)
 {
 	if (ped != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(PLAYER::PLAYER_ID())) // ragdolls carried peds?
 //	if (ped != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(PLAYER::PLAYER_PED_ID()))
@@ -105,7 +66,10 @@ void sac_ragdoll_ped(Ped ped)
 
 	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 1, false, false, false); // very paralyzed
 	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 2, false, false, false); 
-	//		PED::SET_PED_RAGDOLL_FORCE_FALL(ped);  // force fall ?????
+	
+			if (do_fall) PED::SET_PED_RAGDOLL_FORCE_FALL(ped);  // force fall
+
+
 	//	}
 
 //	HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
@@ -215,7 +179,7 @@ void ScriptMain()
 
 			if (DECORATOR::DECOR_EXIST_ON(peds[i], "SAC_ragdoll") && !ENTITY::IS_ENTITY_DEAD(peds[i]) && !sac_is_ped_hogtied(peds[i]))
 			{
-				sac_ragdoll_ped(peds[i]);
+				sac_ragdoll_ped(peds[i], true);
 			}
 
 
@@ -228,7 +192,7 @@ void ScriptMain()
 			pedmapishanging[peds[i]] = false;
 			
 			if (pedmapishanging[peds[i]] && !DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged")) pedmapishanging[peds[i]] = false;
-			else if (!pedmapishanging[peds[i]] && DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged"))
+			else if (!pedmapishanging[peds[i]] && DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged") && !ENTITY::IS_ENTITY_DEAD(peds[i]))
 			{
 				Vector3 vecfoot = ENTITY::GET_WORLD_POSITION_OF_ENTITY_BONE(peds[i], PED::GET_PED_BONE_INDEX(peds[i], 45454));
 				float groundzcoordped;
@@ -242,6 +206,11 @@ void ScriptMain()
 
 			if (pedmapishanging[peds[i]]) 
 			{
+
+
+				PED::SET_PED_CAN_LEG_IK(peds[i], false);
+
+
 								
 				std::string healthstring = std::to_string(ENTITY::GET_ENTITY_HEALTH(peds[i]));
 				char const* healthconstchar = healthstring.c_str();  //use char const* as target type
@@ -267,13 +236,13 @@ void ScriptMain()
 				//	TASK::UNCUFF_PED(peds[i]);
 
 					if (std::rand() % (10) < 1) PED::SET_ENABLE_HANDCUFFS(peds[i], true, false);
-					if (std::rand() % (10) < 1) PED::SET_ENABLE_BOUND_ANKLES(peds[i], true);
+					if (std::rand() % (10) < 5) PED::SET_ENABLE_BOUND_ANKLES(peds[i], true);
 						else PED::SET_ENABLE_BOUND_ANKLES(peds[i], false);
 
 				//	ENTITY::APPLY_FORCE_TO_ENTITY_CENTER_OF_MASS(peds[i], 1, 0, 0, -1, false, false, true, true);
 
 					WAIT(100);
-					sac_ragdoll_ped(peds[i]);
+					sac_ragdoll_ped(peds[i], false);
 				}
 			}
 				
@@ -283,7 +252,7 @@ void ScriptMain()
 
 
 
-		if (!PED::IS_PED_RAGDOLL(peds[i]) && !PED::IS_PED_USING_ANY_SCENARIO(peds[i]) && PED::IS_PED_HUMAN(peds[i]) && peds[i] != PLAYER::PLAYER_ID() && pedmapishanging[peds[i]] )
+		if (!PED::IS_PED_RAGDOLL(peds[i]) && !PED::IS_PED_USING_ANY_SCENARIO(peds[i]) && PED::IS_PED_HUMAN(peds[i]) && PED::IS_PED_MALE(peds[i]) && peds[i] != PLAYER::PLAYER_ID() && pedmapishanging[peds[i]])
 			{
 				PedPlayRandomScenario(peds[i]);
 			}
@@ -397,7 +366,7 @@ void ScriptMain()
 			if (IsKeyJustUp(VK_F5))		// F5 to ragdoll ped while aiming
 			{
 				DECORATOR::DECOR_SET_INT(playerFreeAimingTarget, "SAC_ragdoll", 1);
-				sac_ragdoll_ped(playerFreeAimingTarget);
+				sac_ragdoll_ped(playerFreeAimingTarget, true);
 			}
 			
 			// HUD::_DISPLAY_TEXT("Targeting a hogtied NPC", 0, 0);
@@ -418,7 +387,7 @@ void ScriptMain()
 			if (IsKeyJustUp(VK_F5))		// F5 to ragdoll ped while aiming
 			{
 				DECORATOR::DECOR_SET_INT(playerTarget, "SAC_ragdoll", 1);
-				sac_ragdoll_ped(playerTarget);
+				sac_ragdoll_ped(playerTarget, true);
 			}
 
 
