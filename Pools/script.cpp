@@ -35,6 +35,42 @@ bool sac_is_ped_hogtied(Ped ped) // works
 }
 
 
+void SAC_set_female_body_proportions(Ped ped)
+{
+	float proportions_multiplyier = 0.2f - (rand() % 4 + 1)/10;
+
+//	ped = PLAYER::PLAYER_ID();
+
+	PED::_SET_PED_FACE_FEATURE(ped, 8420, -1.0f + proportions_multiplyier);   //forearm
+	PED::_SET_PED_FACE_FEATURE(ped, 46032, -0.6f + proportions_multiplyier);   //upper arm
+
+	PED::_SET_PED_FACE_FEATURE(ped, 41478, -0.4f + proportions_multiplyier);   //chest width
+	PED::_SET_PED_FACE_FEATURE(ped, 27779, -0.5f + proportions_multiplyier);   //chest depth
+
+	PED::_SET_PED_FACE_FEATURE(ped, 50460, -0.6f + proportions_multiplyier);   //belly width
+	PED::_SET_PED_FACE_FEATURE(ped, 49787, -0.5f + proportions_multiplyier);   //belly depth
+
+	PED::_SET_PED_FACE_FEATURE(ped, 64834, -0.8f + proportions_multiplyier);   //upper legs
+	PED::_SET_PED_FACE_FEATURE(ped, 42067, -1.0f + proportions_multiplyier);   //lower legs
+
+	PED::_SET_PED_FACE_FEATURE(ped, 15833, -0.7f + proportions_multiplyier);  //shoulders height
+	PED::_SET_PED_FACE_FEATURE(ped, 50039, -0.8f + proportions_multiplyier);   //shoulders width
+	PED::_SET_PED_FACE_FEATURE(ped, 7010, -0.2f + proportions_multiplyier);   //shoulders depth
+
+	PED::_SET_PED_FACE_FEATURE(ped, 36277, 0.2f + proportions_multiplyier);   //neck width
+	PED::_SET_PED_FACE_FEATURE(ped, 60890, 0.0f + proportions_multiplyier);   //neck depth ?
+
+	PED::_SET_PED_FACE_FEATURE(ped, 33485, -0.4f + proportions_multiplyier);   //traps
+	PED::_SET_PED_FACE_FEATURE(ped, 18046, -0.4f + proportions_multiplyier);   //lats
+
+	PED::_SET_PED_SCALE(ped, 1 - (rand() % 10 + 1)/10);
+
+	PED::_UPDATE_PED_VARIATION(ped, true, true, true, true, true);
+
+
+}
+
+
 void sac_ragdoll_ped(Ped ped, bool do_fall)
 {
 	if (ped != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(PLAYER::PLAYER_ID())) // ragdolls carried peds?
@@ -87,37 +123,23 @@ void sac_ragdoll_ped(Ped ped, bool do_fall)
 
 
 
-Ped spawnPed(Hash pedModel, float coordX, float coordY, float coordZ)
+
+void SAC_mess_up_IK(Ped ped)
 {
-	STREAMING::REQUEST_MODEL(pedModel, true);
-	while (!STREAMING::HAS_MODEL_LOADED(pedModel)) WAIT(0);
-	Ped pedSpawn = PED::CREATE_PED(pedModel, coordX, coordY, coordZ, 0, 1, 1, 1, 1);
-		// PED::_SET_RANDOM_OUTFIT_VARIATION(pedSpawn, 1);
-					
-		PED::_SET_PED_OUTFIT_PRESET(pedSpawn, (std::rand() % (PED::GET_NUM_META_PED_OUTFITS(pedSpawn) - 1)), false);
-		
-		ENTITY::PLACE_ENTITY_ON_GROUND_PROPERLY(pedSpawn, 1);
-		ENTITY::FREEZE_ENTITY_POSITION(pedSpawn, 0);
-	STREAMING::SET_MODEL_AS_NO_LONGER_NEEDED(pedModel);
-	return pedSpawn;
+
+	// SET_IK_TARGET(ped, int ikIndex, Entity entityLookAt, int boneLookAt, float offsetX, float offsetY, float offsetZ, Any p7, int blendInDuration, int blendOutDuration);
+
+	//PED::SET_IK_TARGET(ped, 39, ped, 65245, 0.0, 0.0, -10.0, 0, -1, -1); // ik l foot
+	//PED::SET_IK_TARGET(ped, 11, ped, 65245, 0.0, 0.0, -10.0, 0, -1, -1); // ik r foot
+
+	PED::SET_IK_TARGET(ped, 1, PLAYER::PLAYER_PED_ID(), 21030, 0.0, 0.0, -10.0, 0, -1, 100000); // skel_head
+//	PED::SET_IK_TARGET(ped, 1, PLAYER::PLAYER_PED_ID(), 21030, 0.0, 0.0, -10.0, 0, -1, 100000); // skel_head
+
+	//PED::SET_IK_TARGET(l_F0, 1, PLAYER::PLAYER_PED_ID(), 31086, 0.0, 0.0, 0.0, 0, -1, -1);
+	//PED::SET_IK_TARGET(PLAYER::PLAYER_PED_ID(), 1, l_F0, 31086, 0.0, 0.0, 0.0, 0, -1, -1);
 }
 
 
-Ped sac_spawn_female()
-{
-	Vector3 vfront = ENTITY::GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(PLAYER::PLAYER_PED_ID(), 0.0f, 5.0f, 0.0f);
-
-	Ped myPed = spawnPed((MISC::GET_HASH_KEY("sac_female")), vfront.x, vfront.y, vfront.z);
-
-	TASK::TASK_TURN_PED_TO_FACE_ENTITY(myPed, PLAYER::PLAYER_PED_ID(), 4000, 0, 0, 0);
-
-	Vector3 vpedloc = ENTITY::GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(myPed, 0.0f, 0.0f, 0.0f);
-	TASK::_TASK_USE_NEAREST_SCENARIO_TO_COORD(myPed, vpedloc.x, vpedloc.y, vpedloc.z, 100, -1, true, true, true, true);
-
-	return myPed;
-
-//	HUD::_DISPLAY_TEXT("PLAY SCENARIO", 0, 0);
-}
 
 
 void ScriptMain()
@@ -189,9 +211,10 @@ void ScriptMain()
 
 								//checking if NPC is being hanged with TieYourLasso mod
 
-			pedmapishanging[peds[i]] = false;
+		//	pedmapishanging[peds[i]] = false;
 			
 			if (pedmapishanging[peds[i]] && !DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged")) pedmapishanging[peds[i]] = false;
+
 			else if (!pedmapishanging[peds[i]] && DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged") && !ENTITY::IS_ENTITY_DEAD(peds[i]))
 			{
 				Vector3 vecfoot = ENTITY::GET_WORLD_POSITION_OF_ENTITY_BONE(peds[i], PED::GET_PED_BONE_INDEX(peds[i], 45454));
@@ -208,9 +231,10 @@ void ScriptMain()
 			{
 
 
-				PED::SET_PED_CAN_LEG_IK(peds[i], false);
+		// test		PED::SET_PED_CAN_LEG_IK(peds[i], false);
 
-
+				TASK::TASK_STAY_IN_COVER(peds[i]);
+				PED::RESET_PED_RAGDOLL_TIMER(peds[i]);
 								
 				std::string healthstring = std::to_string(ENTITY::GET_ENTITY_HEALTH(peds[i]));
 				char const* healthconstchar = healthstring.c_str();  //use char const* as target type
@@ -221,28 +245,32 @@ void ScriptMain()
 				HUD::_DISPLAY_TEXT(healthconstchar, 0, 0);
 
 
+
+				PedPanic(peds[i]);
+				
+
 				if (sac_is_ped_hogtied(peds[i]) && !ENTITY::IS_ENTITY_DEAD(peds[i]))
 				{
-					PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
+			//		PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
 			//		WAIT(100);
 			//		PED::SET_PED_TO_RAGDOLL(peds[i], 3000000, 3000000, 0, false, false, false);
 				}
 				else
 				{
-					PedPanic(peds[i]);
+					
 				//	PedPain(peds[i]);
 
 
 				//	TASK::UNCUFF_PED(peds[i]);
 
-					if (std::rand() % (10) < 1) PED::SET_ENABLE_HANDCUFFS(peds[i], true, false);
-					if (std::rand() % (10) < 5) PED::SET_ENABLE_BOUND_ANKLES(peds[i], true);
-						else PED::SET_ENABLE_BOUND_ANKLES(peds[i], false);
+			//test		if (std::rand() % (10) < 1) PED::SET_ENABLE_HANDCUFFS(peds[i], true, false);
+			//test		if (std::rand() % (10) < 5) PED::SET_ENABLE_BOUND_ANKLES(peds[i], true);
+			//test			else PED::SET_ENABLE_BOUND_ANKLES(peds[i], false);
 
 				//	ENTITY::APPLY_FORCE_TO_ENTITY_CENTER_OF_MASS(peds[i], 1, 0, 0, -1, false, false, true, true);
 
-					WAIT(100);
-					sac_ragdoll_ped(peds[i], false);
+			//		WAIT(100);
+			//test		sac_ragdoll_ped(peds[i], false);
 				}
 			}
 				
@@ -267,6 +295,7 @@ void ScriptMain()
 		if (std::rand() % (29999 - 0 + 1) < 2) // automatically spawn random female
 		{
 		Ped autospawnfemale = sac_spawn_female();
+		WAIT(100);
 		Blip pedblip = MAP::BLIP_ADD_FOR_ENTITY(0x19365607, autospawnfemale);
 		MAP::_SET_BLIP_NAME_FROM_PLAYER_STRING(pedblip, "SAC female");
 		}
@@ -281,6 +310,7 @@ void ScriptMain()
 		//	Vector3 plCoords2 = ENTITY::GET_ENTITY_COORDS(PLAYER::PLAYER_PED_ID(), true, false);
 
 			Ped f3femalespawn = sac_spawn_female();
+			
 
 				Blip pedblip = MAP::BLIP_ADD_FOR_ENTITY(0x19365607, f3femalespawn);
 				MAP::_SET_BLIP_NAME_FROM_PLAYER_STRING(pedblip, "PDO bleeder");
@@ -293,14 +323,21 @@ void ScriptMain()
 
 		Entity playerFreeAimingTarget, playerTarget;
 
-		PLAYER::GET_ENTITY_PLAYER_IS_FREE_AIMING_AT(player, &playerFreeAimingTarget);	// works only with PLAYER_ID()
-		PLAYER::GET_PLAYER_TARGET_ENTITY(player, &playerTarget);						// works only with PLAYER_ID()
+		PLAYER::GET_ENTITY_PLAYER_IS_FREE_AIMING_AT(PLAYER::PLAYER_ID(), &playerFreeAimingTarget);	// works only with PLAYER_ID()
+		PLAYER::GET_PLAYER_TARGET_ENTITY(PLAYER::PLAYER_ID(), &playerTarget);						// works only with PLAYER_ID()
 
 		if (PED::IS_PED_HUMAN(playerFreeAimingTarget)) // && activation_state) // && peds[i] != player)
 		{
 
-			if (IsKeyJustUp(VK_F7))		// F7 to perform scenario
-			{
+			if (IsKeyJustUp(VK_F5))		TASK::TASK_WANDER_STANDARD(playerFreeAimingTarget, 10.0f, 10);
+
+			if (IsKeyJustUp(VK_F7))		SAC_set_female_body_proportions(playerFreeAimingTarget);
+
+
+
+			//	PED::SET_PED_RAGDOLL_FORCE_FALL(playerFreeAimingTarget);
+
+
 			//	TASK::TASK_KNOCKED_OUT(playerFreeAimingTarget, 0, false);
 			//	TASK::TASK_KNOCKED_OUT_AND_HOGTIED(playerFreeAimingTarget, 0, false);
 			//	PED::SET_ENABLE_BOUND_ANKLES(playerFreeAimingTarget, true); // works
@@ -316,17 +353,21 @@ void ScriptMain()
 
 			//	TASK_USE_NEAREST_SCENARIO_CHAIN_TO_COORD(Ped ped, float x, float y, float z, float distance, BOOL p5, BOOL p6, BOOL p7, BOOL p8)
 
-				TASK::TASK_KNOCKED_OUT_AND_HOGTIED(playerFreeAimingTarget, 0, true);
+			//	TASK::TASK_KNOCKED_OUT_AND_HOGTIED(playerFreeAimingTarget, 0, true);
 
-			}
+
 
 		}
 
 
 		if (PED::IS_PED_HUMAN(playerTarget)) // && activation_state) // && peds[i] != player)
 		{
-			if (IsKeyJustUp(VK_F7))		// F7 to perform scenario
-			{
+			if (IsKeyJustUp(VK_F5))		TASK::TASK_WANDER_STANDARD(playerFreeAimingTarget, 10.0f, 10);
+
+			if (IsKeyJustUp(VK_F7))	SAC_set_female_body_proportions(playerTarget);
+
+
+
 			//	TASK::TASK_KNOCKED_OUT(playerTarget, 0, false);
 			//	TASK::TASK_KNOCKED_OUT_AND_HOGTIED(playerTarget, 0, false);
 			//	PED::SET_ENABLE_BOUND_ANKLES(playerTarget, true); //works
@@ -344,58 +385,12 @@ void ScriptMain()
 			//	Vector3 vpedloc = ENTITY::GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(playerTarget, 0.0f, 0.0f, 0.0f);
 			//	TASK::TASK_USE_NEAREST_SCENARIO_CHAIN_TO_COORD(playerTarget, vpedloc.x, vpedloc.y, vpedloc.z, 100, true, true, true, true);
 
-				TASK::TASK_KNOCKED_OUT_AND_HOGTIED(playerTarget, 0, true);
-
-			}
+			//	TASK::TASK_KNOCKED_OUT_AND_HOGTIED(playerTarget, 0, true);
 
 		}
 
 
 
-		if (PED::IS_PED_HUMAN(playerFreeAimingTarget)) // && sac_is_ped_hogtied(playerFreeAimingTarget)) // && activation_state) // && peds[i] != player)
-		{
-			// AI::TASK_HANDS_UP(peds[i], 20000, player, 0, false);
-			// AI::_0x42AC6401ABB8C7E5(playerFreeAimingTarget, 1, true);	// TASK_KNOCKED_OUT_AND_HOGTIED 
-			// AI::_0x27829AFD3E03AC1A(player, playerFreeAimingTarget);    // TASK_HOGTIE_TARGET_PED
-			// AI::_0x7981037A96E7D174(playerFreeAimingTarget);			// _SET_ENABLE_HANDCUFFS_2 <= works
-			// AI::TASK_CLEAR_LOOK_AT(playerFreeAimingTarget);			// not working
-			// AI::TASK_STAND_STILL(playerFreeAimingTarget, -1);		// not working
-
-			// AI::CLEAR_PED_TASKS_IMMEDIATELY(playerFreeAimingTarget, false, false); // breaks the hogtie and makes them ragdoll
-			
-			if (IsKeyJustUp(VK_F5))		// F5 to ragdoll ped while aiming
-			{
-				DECORATOR::DECOR_SET_INT(playerFreeAimingTarget, "SAC_ragdoll", 1);
-				sac_ragdoll_ped(playerFreeAimingTarget, true);
-			}
-			
-			// HUD::_DISPLAY_TEXT("Targeting a hogtied NPC", 0, 0);
-
-		}
-
-		if (PED::IS_PED_HUMAN(playerTarget)) // && sac_is_ped_hogtied(playerTarget)) // && activation_state) // && peds[i] != player)
-		{
-			// AI::TASK_HANDS_UP(peds[i], 20000, player, 0, false);
-			// AI::_0x42AC6401ABB8C7E5(playerTarget, 1, true);	// TASK_KNOCKED_OUT_AND_HOGTIED 
-			// AI::_0x27829AFD3E03AC1A(player, playerTarget); // TASK_HOGTIE_TARGET_PED
-			// AI::_0x7981037A96E7D174(playerTarget);			// _SET_ENABLE_HANDCUFFS_2
-			// AI::TASK_CLEAR_LOOK_AT(playerTarget);			// not working
-			// AI::TASK_STAND_STILL(playerTarget, -1);			// not working
-
-			// AI::CLEAR_PED_TASKS_IMMEDIATELY(playerTarget, false, false);
-
-			if (IsKeyJustUp(VK_F5))		// F5 to ragdoll ped while aiming
-			{
-				DECORATOR::DECOR_SET_INT(playerTarget, "SAC_ragdoll", 1);
-				sac_ragdoll_ped(playerTarget, true);
-			}
-
-
-
-		//	HUD::_DISPLAY_TEXT("Targeting a hogtied NPC", 0, 0);
-			
-
-		}
 
 
 		
