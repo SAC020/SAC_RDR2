@@ -21,18 +21,7 @@ namespace std
 
 
 
-bool sac_is_ped_hogtied(Ped ped) // works
-{
-	if (TASK::GET_IS_TASK_ACTIVE(ped, 400) || TASK::GET_IS_TASK_ACTIVE(ped, 399))
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
 
-}
 
 
 void SAC_set_female_body_proportions(Ped ped)
@@ -67,14 +56,15 @@ void SAC_set_female_body_proportions(Ped ped)
 
 	PED::_UPDATE_PED_VARIATION(ped, true, true, true, true, true);
 
+	DECORATOR::DECOR_SET_INT(ped, "SAC_morphed_female", 1);
 
 }
 
 
 void sac_ragdoll_ped(Ped ped, bool do_fall)
 {
-	if (ped != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(PLAYER::PLAYER_ID())) // ragdolls carried peds?
-//	if (ped != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(PLAYER::PLAYER_PED_ID()))
+	if (ped != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(PLAYER::PLAYER_ID()) && ped != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(PLAYER::PLAYER_PED_ID())) // ragdolls carried peds?
+	
 	{
 			int npchealth = ENTITY::GET_ENTITY_HEALTH(ped);
 			int npcmaxhealth = ENTITY::GET_ENTITY_MAX_HEALTH(ped, false);
@@ -82,7 +72,7 @@ void sac_ragdoll_ped(Ped ped, bool do_fall)
 
 
 			for (int i_flag = 0; i_flag < 20; i_flag++) PED::CLEAR_RAGDOLL_BLOCKING_FLAGS(ped, i_flag);
-			TASK::TASK_STAY_IN_COVER(ped);
+	// add parameter		TASK::TASK_STAY_IN_COVER(ped);
 	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 3, false, false, false); // paralysis
 
 			int health_rand = std::rand() % (randommax);
@@ -91,11 +81,11 @@ void sac_ragdoll_ped(Ped ped, bool do_fall)
 	//		v2 = rand() % 100 + 1;     // v2 in the range 1 to 100
 	//		v3 = rand() % 30 + 1985;   // v3 in the range 1985-2014 
 
-
+			if (do_fall) PED::SET_PED_RAGDOLL_FORCE_FALL(ped);  // force fall
 	
-			if (npchealth > 100) PED::SET_PED_TO_RAGDOLL(ped, (0 + health_rand), (0 + health_rand), 0, false, false, false); // 0
-			if (npchealth > 50 && npchealth <= 100) PED::SET_PED_TO_RAGDOLL(ped, (1000 + health_rand), (1000 + health_rand), 3, false, false, false); // 3
-			if (npchealth <= 50) PED::SET_PED_TO_RAGDOLL(ped, (3000 + health_rand), (3000 + health_rand), 1, false, false, false); // 1
+			if (npchealth > 100) PED::SET_PED_TO_RAGDOLL(ped, (30000), (30000), 0, true, true, false); // 0
+			if (npchealth > 50 && npchealth <= 100) PED::SET_PED_TO_RAGDOLL(ped, (30000), (30000), 3, true, true, false); // 3
+			if (npchealth <= 50) PED::SET_PED_TO_RAGDOLL(ped, (30000), (30000), 1, true, true, false); // 1
 	//		if (npchealth <= 40) PED::SET_PED_TO_RAGDOLL(ped, (5000 + health_rand), (5000 + health_rand), 2, false, false, false); // 2
 
 	//		std::rand() % (2999 - 0 + 1)
@@ -103,19 +93,20 @@ void sac_ragdoll_ped(Ped ped, bool do_fall)
 	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 1, false, false, false); // very paralyzed
 	//		PED::SET_PED_TO_RAGDOLL(ped, 3000, 3000, 2, false, false, false); 
 	
-			if (do_fall) PED::SET_PED_RAGDOLL_FORCE_FALL(ped);  // force fall
+			
 
 
 	//	}
 
-//	HUD::_DISPLAY_TEXT("RAGDOLL", 0, 0);
+			std::string ragdoll_string = "RAGDOLL";
+			char const* ragdoll_constchar = ragdoll_string.c_str();  //use char const* as target type
+			HUD::_DISPLAY_TEXT(ragdoll_constchar, 0, 0);
+
+			WAIT(100);
 //	}
 	}
 
-		
-
-//	Blip pedblip = MAP::BLIP_ADD_FOR_ENTITY(0x19365607, ped);
-//	MAP::_SET_BLIP_NAME_FROM_PLAYER_STRING(pedblip, "PDO bleeder");
+	
 
 }
 
@@ -149,8 +140,13 @@ void ScriptMain()
 
 
 	DECORATOR::DECOR_REGISTER("SAC_ragdoll", 3);
+	DECORATOR::DECOR_REGISTER("SAC_morphed_female", 3);
 
-	std::map<Ped, bool> pedmapishanging;
+
+	std::map<Ped, bool> pedmap_ishanging;
+	std::map<Ped, bool> pedmap_ismorphed;
+	std::map<Ped, int> pedmap_hangingtick;
+
 
 	
 
@@ -160,8 +156,7 @@ void ScriptMain()
 
 		Player player = PLAYER::PLAYER_ID();
 
-//		bool activation_state{ false };
-//		constexpr int activation_key{ VK_F7 };
+
 
 
 
@@ -179,6 +174,16 @@ void ScriptMain()
 
 		srand(GetTickCount());
 
+
+		AUDIO::STOP_PED_SPEAKING(PLAYER::PLAYER_ID(), true);
+		AUDIO::STOP_PED_SPEAKING(PLAYER::PLAYER_PED_ID(), true);
+
+		AUDIO::SET_AMBIENT_VOICE_NAME(PLAYER::PLAYER_ID(), "shut the fuck up");
+	//	AUDIO::SET_AMBIENT_VOICE_NAME(PLAYER::PLAYER_ID(), "shut the fuck up");
+
+	//	AUDIO::DISABLE_PED_PAIN_AUDIO(peds[i], true);
+
+
 		const int ARR_SIZE = 150;
 		Ped peds[ARR_SIZE];
 		int count = worldGetAllPeds(peds, ARR_SIZE);
@@ -186,12 +191,12 @@ void ScriptMain()
 		for (int i = 0; i < count; i++)
 		{
 
-		//	if (PED::IS_PED_RAGDOLL(peds[i])) TASK::TASK_HOGTIEABLE(peds[i]);
+			// *********************************** Blanket population management *********************************************** //
 
-			if (sac_is_ped_hogtied(peds[i]))
-			{
-				TASK::TASK_STAND_STILL(peds[i], -1);
-			}
+		//	if (sac_is_ped_hogtied(peds[i]))
+		//	{
+		//		TASK::TASK_STAND_STILL(peds[i], -1);
+		//	}
 
 			PED::SET_PED_CAN_ARM_IK(peds[i], true);
 			PED::SET_PED_CAN_HEAD_IK(peds[i], true);
@@ -205,6 +210,34 @@ void ScriptMain()
 			}
 
 
+			// sandboxing
+
+			if (!PED::IS_PED_RAGDOLL(peds[i]) && PED::IS_PED_HUMAN(peds[i]) && !PED::IS_PED_MALE(peds[i]) && peds[i] != PLAYER::PLAYER_ID() && !pedmap_ishanging[peds[i]])
+			{
+				if (std::rand() % (1999 - 0 + 1) < 1) PedPlayRandomScenario(peds[i]);
+				else if (std::rand() % (1999 - 0 + 1) < 1) TASK::TASK_WANDER_STANDARD(peds[i], 10.0f, 1);
+				else if (std::rand() % (1999 - 0 + 1) < 1)
+				{
+					Vector3 vpedloc = ENTITY::GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(peds[i], 0.0f, 0.0f, 0.0f);
+					TASK::_TASK_USE_NEAREST_SCENARIO_TO_COORD(peds[i], vpedloc.x, vpedloc.y, vpedloc.z, 100, -1, true, true, true, true);
+				}
+
+			}
+
+			// end sandboxing
+
+
+			if (DECORATOR::DECOR_EXIST_ON(peds[i], "SAC_morphed_female") == false)
+			{
+				if (PED::IS_PED_HUMAN(peds[i]) && !PED::IS_PED_MALE(peds[i]) && !pedmap_ismorphed[peds[i]])
+				{
+					pedmap_ismorphed[peds[i]] = true;
+					SAC_set_female_body_proportions(peds[i]);
+				}
+			}
+
+
+			// *********************************** End blanket population management ***************************************** //
 
 			// *********************************** Hanging management *********************************************** //
 
@@ -213,28 +246,47 @@ void ScriptMain()
 
 		//	pedmapishanging[peds[i]] = false;
 			
-			if (pedmapishanging[peds[i]] && !DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged")) pedmapishanging[peds[i]] = false;
-
-			else if (!pedmapishanging[peds[i]] && DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged") && !ENTITY::IS_ENTITY_DEAD(peds[i]))
+			if (pedmap_ishanging[peds[i]] && !DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged"))
 			{
-				Vector3 vecfoot = ENTITY::GET_WORLD_POSITION_OF_ENTITY_BONE(peds[i], PED::GET_PED_BONE_INDEX(peds[i], 45454));
+				pedmap_ishanging[peds[i]] = false;
+			}
+			else if (!pedmap_ishanging[peds[i]] && DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged") && !ENTITY::IS_ENTITY_DEAD(peds[i]))
+			{
+				Vector3 vecfoot = ENTITY::GET_WORLD_POSITION_OF_ENTITY_BONE(peds[i], PED::GET_PED_BONE_INDEX(peds[i], 45454)); 
 				float groundzcoordped;
 				MISC::GET_GROUND_Z_FOR_3D_COORD(vecfoot.x, vecfoot.y, vecfoot.z, &groundzcoordped, true);
-				if (vecfoot.z > groundzcoordped + 0.2 && peds[i] != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(player)) //is not carried by player
+				if (vecfoot.z > groundzcoordped + 0.1 && peds[i] != PED::_GET_FIRST_ENTITY_PED_IS_CARRYING(player)) //is not carried by player
 				{
-					pedmapishanging[peds[i]] = true;
+					pedmap_ishanging[peds[i]] = true;
+					
+			//		int initial_hanging_ragdoll = std::rand() % 3 + 1;
+
+			//		if (initial_hanging_ragdoll == 1) PED::SET_PED_TO_RAGDOLL(ped, (30000), (30000), 0, true, true, false);
+			//		if (initial_hanging_ragdoll == 2) PED::SET_PED_TO_RAGDOLL(ped, (30000), (30000), 1, true, true, false);
+			//		if (initial_hanging_ragdoll == 3) PED::SET_PED_TO_RAGDOLL(ped, (30000), (30000), 3, true, true, false);
+
+
+
+
+			//		pedmap_hangingtick[peds[i]] = GetTickCount();
 				}
 			}
 
 
-			if (pedmapishanging[peds[i]]) 
+			if (pedmap_ishanging[peds[i]] && !ENTITY::IS_ENTITY_DEAD(peds[i]))
 			{
 
 
 		// test		PED::SET_PED_CAN_LEG_IK(peds[i], false);
 
-				TASK::TASK_STAY_IN_COVER(peds[i]);
-				PED::RESET_PED_RAGDOLL_TIMER(peds[i]);
+		//		TASK::TASK_STAY_IN_COVER(peds[i]);
+			
+				if (std::rand() % (100) < 1) // && GetTickCount() > pedmap_hangingtick[peds[i]] + 5000)
+				{
+					sac_ragdoll_ped(peds[i], true);
+				//	pedmap_hangingtick[peds[i]] = GetTickCount();
+				}
+				else PED::RESET_PED_RAGDOLL_TIMER(peds[i]);
 								
 				std::string healthstring = std::to_string(ENTITY::GET_ENTITY_HEALTH(peds[i]));
 				char const* healthconstchar = healthstring.c_str();  //use char const* as target type
@@ -249,30 +301,27 @@ void ScriptMain()
 				PedPanic(peds[i]);
 				
 
-				if (sac_is_ped_hogtied(peds[i]) && !ENTITY::IS_ENTITY_DEAD(peds[i]))
+				if (sac_is_ped_hogtied(peds[i]) == false)
 				{
-			//		PED::SET_PED_RAGDOLL_FORCE_FALL(peds[i]);
-			//		WAIT(100);
-			//		PED::SET_PED_TO_RAGDOLL(peds[i], 3000000, 3000000, 0, false, false, false);
+
+
+					if (std::rand() % (1) < 1) PED::SET_ENABLE_HANDCUFFS(peds[i], true, false); //  || DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged_by_hands")) 
+						else TASK::UNCUFF_PED(peds[i]);
+					if (std::rand() % (20) < 1 || DECORATOR::DECOR_EXIST_ON(peds[i], "TYL_hanged_by_feet")) PED::SET_ENABLE_BOUND_ANKLES(peds[i], true);
+						else PED::SET_ENABLE_BOUND_ANKLES(peds[i], false);
+
 				}
-				else
-				{
 					
-				//	PedPain(peds[i]);
+				//	APPLY_FORCE_TO_ENTITY(peds[i], int forceFlags, float x, float y, float z, float offX, float offY, float offZ, int boneIndex, BOOL isDirectionRel, BOOL ignoreUpVec, BOOL isForceRel, BOOL p12, BOOL p13)
 
-
-				//	TASK::UNCUFF_PED(peds[i]);
-
-			//test		if (std::rand() % (10) < 1) PED::SET_ENABLE_HANDCUFFS(peds[i], true, false);
-			//test		if (std::rand() % (10) < 5) PED::SET_ENABLE_BOUND_ANKLES(peds[i], true);
-			//test			else PED::SET_ENABLE_BOUND_ANKLES(peds[i], false);
+				//	NATIVE_INLINE static void APPLY_FORCE_TO_ENTITY(Entity entity, int forceFlags, float x, float y, float z, float offX, float offY, float offZ, int boneIndex, BOOL isDirectionRel, BOOL ignoreUpVec, BOOL isForceRel, BOOL p12, BOOL p13)
 
 				//	ENTITY::APPLY_FORCE_TO_ENTITY_CENTER_OF_MASS(peds[i], 1, 0, 0, -1, false, false, true, true);
 
 			//		WAIT(100);
 			//test		sac_ragdoll_ped(peds[i], false);
-				}
 			}
+			
 				
 
 			// *********************************** End hanging management *********************************************** //
@@ -280,10 +329,7 @@ void ScriptMain()
 
 
 
-		if (!PED::IS_PED_RAGDOLL(peds[i]) && !PED::IS_PED_USING_ANY_SCENARIO(peds[i]) && PED::IS_PED_HUMAN(peds[i]) && PED::IS_PED_MALE(peds[i]) && peds[i] != PLAYER::PLAYER_ID() && pedmapishanging[peds[i]])
-			{
-				PedPlayRandomScenario(peds[i]);
-			}
+
 
 
 
@@ -292,12 +338,10 @@ void ScriptMain()
 		}    // end scanning peds[i]
 
 
-		if (std::rand() % (29999 - 0 + 1) < 2) // automatically spawn random female
+		if (std::rand() % (49999 - 0 + 1) < 2) // automatically spawn random female
 		{
 		Ped autospawnfemale = sac_spawn_female();
-		WAIT(100);
-		Blip pedblip = MAP::BLIP_ADD_FOR_ENTITY(0x19365607, autospawnfemale);
-		MAP::_SET_BLIP_NAME_FROM_PLAYER_STRING(pedblip, "SAC female");
+		WAIT(1000);
 		}
 
 
@@ -310,11 +354,7 @@ void ScriptMain()
 		//	Vector3 plCoords2 = ENTITY::GET_ENTITY_COORDS(PLAYER::PLAYER_PED_ID(), true, false);
 
 			Ped f3femalespawn = sac_spawn_female();
-			
-
-				Blip pedblip = MAP::BLIP_ADD_FOR_ENTITY(0x19365607, f3femalespawn);
-				MAP::_SET_BLIP_NAME_FROM_PLAYER_STRING(pedblip, "PDO bleeder");
-
+			WAIT(1000);
 
 		//	HUD::_DISPLAY_TEXT("Spawning NPC", 0, 0);
 		}
@@ -329,9 +369,19 @@ void ScriptMain()
 		if (PED::IS_PED_HUMAN(playerFreeAimingTarget)) // && activation_state) // && peds[i] != player)
 		{
 
-			if (IsKeyJustUp(VK_F5))		TASK::TASK_WANDER_STANDARD(playerFreeAimingTarget, 10.0f, 10);
+			if (IsKeyJustUp(VK_F5))		TASK::TASK_WANDER_STANDARD(playerFreeAimingTarget, 10.0f, 1);
 
 			if (IsKeyJustUp(VK_F7))		SAC_set_female_body_proportions(playerFreeAimingTarget);
+
+
+		//	std::string ismorphed_string = std::to_string(pedmap_ismorphed[playerFreeAimingTarget]);
+		//	char const* ismorphed_char = ismorphed_string.c_str();  //use char const* as target type
+
+		//	UIDEBUG::_BG_SET_TEXT_SCALE(0.5, 0.5);
+		//	UIDEBUG::_BG_DISPLAY_TEXT(healthconstchar, 0, 0);
+
+		//	HUD::_DISPLAY_TEXT(ismorphed_char, 0, 0);
+
 
 
 
@@ -362,10 +412,18 @@ void ScriptMain()
 
 		if (PED::IS_PED_HUMAN(playerTarget)) // && activation_state) // && peds[i] != player)
 		{
-			if (IsKeyJustUp(VK_F5))		TASK::TASK_WANDER_STANDARD(playerFreeAimingTarget, 10.0f, 10);
+			if (IsKeyJustUp(VK_F5))		TASK::TASK_WANDER_STANDARD(playerFreeAimingTarget, 10.0f, 1);
 
 			if (IsKeyJustUp(VK_F7))	SAC_set_female_body_proportions(playerTarget);
 
+
+		//	std::string ismorphed_string = std::to_string(pedmap_ismorphed[playerTarget]);
+		//	char const* ismorphed_char = ismorphed_string.c_str();  //use char const* as target type
+
+		//	UIDEBUG::_BG_SET_TEXT_SCALE(0.5, 0.5);
+		//	UIDEBUG::_BG_DISPLAY_TEXT(healthconstchar, 0, 0);
+
+		//	HUD::_DISPLAY_TEXT(ismorphed_char, 0, 0);
 
 
 			//	TASK::TASK_KNOCKED_OUT(playerTarget, 0, false);
